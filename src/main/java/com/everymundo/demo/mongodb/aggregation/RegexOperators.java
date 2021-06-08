@@ -44,7 +44,6 @@ public class RegexOperators {
 		 */
 		public Match match(String regex) {
             return match(regex, null);
-			
 		}
 
          /**

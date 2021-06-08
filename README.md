@@ -8,6 +8,7 @@ The Spring Data MongoDB project provides integration with the MongoDB document d
 
 Spring Data MongoDB offers a bunch of nice features, however, it does not support all the operations available in MongoDB. This tutorial will provide a clean way to extend Spring Data MongoDB aggregation features. We're not including all the supported operations. In case you need more or different ones that are not part of the tutorial, you can always follow the same approach.
 <br/>
+<br/>
 
 ## 2. Getting Started
 In this tutorial we're going to show you how easily extend Spring Data Reactive MongoDB aggregation features. You can start from scratch and complete each step or you can skip the steps that are already familiar to you and download the complete code [here](https://github.com/EveryMundo/mongo-aggregation-extension).
@@ -26,6 +27,7 @@ We'll be using Spring Boot 2.4.6, Spring Data Reactive MongoDB, Java 11, Apache 
 We recommend an OpenJDK distribution of Java for development as well as production environments since Oracle has changed the Licence Agreement (see here) starting April 16, 2019. AdoptOpenJDK (https://adoptopenjdk.net) offers free prebuilt OpenJDK binaries for Windows, Linux and MacOS.
 
 This tutorial will implement an HTTP POST Book Search endpoint for a Library Service.
+<br/>
 <br/>
 
 ### 2.1. Starting with Spring Initializr
@@ -189,92 +191,8 @@ public class Book {
 We're not going to be using the domain classes directly in the Aggregation example but the service that populates the DB needs them and they will give you a good idea of the information we'll be querying.
 
 ### 2.3. Create Data Transfer Classes
-The Book Search feature will need several data transfer classes to receive the filters in the request and return the results in the response.
-
-`LibraryFilter.java`
-```java
-package com.everymundo.demo.model.filter;
- 
-import lombok.Data;
- 
-@Data
-public class LibraryFilter {
- 
-   private BookFilter book;
-   private AuthorFilter author;
-  
-}
-```
-
-`AuthorFilter.java`
-```java
-package com.everymundo.demo.model.filter;
- 
-import org.apache.commons.lang3.StringUtils;
- 
-import lombok.Data;
- 
-@Data
-public class AuthorFilter {
- 
-   private String firstName;
-   private String middleName;
-   private String lastName;
- 
-}
-```
-
-`BookFilter.java`
-```java
-package com.everymundo.demo.model.filter;
- 
-import org.apache.commons.lang3.StringUtils;
- 
-import lombok.Data;
- 
-@Data
-public class BookFilter {
- 
-   private String name;
-   private Integer year;
- 
-}
-```
-
-`AuthorData.java`
-```java
-package com.everymundo.demo.model;
- 
-import java.time.LocalDate;
- 
-import lombok.Data;
- 
-@Data
-public class AuthorData {
- 
-   private String firstName;
-   private String middleName;
-   private String lastName;
-   private LocalDate birthDate;
- 
-}
-```
-
-`BookData.java`
-```java
-package com.everymundo.demo.model;
- 
-import lombok.Data;
- 
-@Data
-public class BookData {
- 
-   private String name;
-   private int year;
-   private AuthorData author;
-  
-}
-```
+The Book Search feature will need several data transfer classes to receive the filters in the request and return the results in the response. To avoid making this tutorial too boring we're not going to put the code of those clases here. You can check `LibraryFilter`, `BookFilter`, `AuthorFilter`, `BookData` and `AuthorData` [here](https://github.com/EveryMundo/mongo-aggregation-extension/tree/master/src/main/java/com/everymundo/demo/model)
+<br/>
 <br/>
 
 ### 2.4. Create Functional Endpoint
@@ -346,8 +264,493 @@ public class LibraryHandler {
 ```
 <br/>
 
+### 2.5. Create the Service
+`LibraryService` implements `searchBooks` method, responsible for processing the filters, querying the database and returning the results. The `searchBooks` method uses `ReactiveMongoTemplate`, a Spring Data MongoDB class that simplifies the use of Reactive MongoDB usage and helps to avoid common errors. It executes core MongoDB workflow, leaving application code to provide `Document` and extract results. Additionally, several other Spring Data MongoDB classes are used to build a complex aggregation.
+
+`LibraryService.java`
+```java
+package com.everymundo.demo.service;
+ 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+ 
+import com.everymundo.demo.model.BookData;
+import com.everymundo.demo.model.filter.LibraryFilter;
+import com.everymundo.demo.mongodb.aggregation.ExtendedAggregation;
+import com.everymundo.demo.mongodb.aggregation.RegexOperators;
+ 
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationExpression;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+import org.springframework.data.mongodb.core.aggregation.BooleanOperators;
+import org.springframework.data.mongodb.core.aggregation.ComparisonOperators;
+import org.springframework.data.mongodb.core.aggregation.ConvertOperators;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.stereotype.Service;
+ 
+import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+ 
+@Service
+@RequiredArgsConstructor
+public class LibraryService {
+ 
+   private final ReactiveMongoTemplate mongoTemplate;
+ 
+ 
+   public Flux<BookData> searchBooks(LibraryFilter filter) {
+       return Flux.defer(() -> {
+               List<AggregationOperation> stages = new ArrayList<>();
+ 
+               if (filter.hasBookFilters()) {
+                   Criteria bookCriteria = new Criteria();
+ 
+                   // Book Name
+                   if (StringUtils.isNotBlank(filter.getBook().getName())) {
+                       bookCriteria.and("name").regex(".*" + filter.getBook().getName() + ".*", "i");
+                   }
+                   // Book Year
+                   if (filter.getBook().getYear() != null) {
+                       bookCriteria.and("year").is(filter.getBook().getYear());
+                   }
+ 
+                   // Match for Book Filters
+                   stages.add(Aggregation.match(bookCriteria));
+               }
+ 
+               List<AggregationOperation> authorPipeline = new ArrayList<>();
+              
+               if (filter.hasAuthorFilter()) {
+                   List<AggregationExpression> authorMatches = new ArrayList<>();
+                  
+                   // Compare book.authorId with author.id
+                   authorMatches.add(ComparisonOperators.valueOf("$_id").equalTo(ConvertOperators.valueOf("$$authorId").convertToObjectId()));
+ 
+                   // Author First Name
+                   if (StringUtils.isNotBlank(filter.getAuthor().getFirstName())) {
+                       authorMatches.add(RegexOperators.valueOf("$firstName").match(".*" + filter.getAuthor().getFirstName() + ".*", "i"));
+                   }
+                   // Author Middle Name
+                   if (StringUtils.isNotBlank(filter.getAuthor().getMiddleName())) {
+                       authorMatches.add(RegexOperators.valueOf("$middleName").match(".*" + filter.getAuthor().getMiddleName() + ".*", "i"));
+                   }
+                   // Author Last Name
+                   if (StringUtils.isNotBlank(filter.getAuthor().getLastName())) {
+                       authorMatches.add(RegexOperators.valueOf("$lastName").match(".*" + filter.getAuthor().getLastName() + ".*", "i"));
+                   }
+ 
+                   // Match to join and filter author
+                   authorPipeline.add(ExtendedAggregation.matchExpr(BooleanOperators.And.and(authorMatches.toArray())));
+               } else {
+                   // Match to join author
+                   authorPipeline.add(ExtendedAggregation.matchExpr(ComparisonOperators.valueOf("$_id").equalTo(ConvertOperators.valueOf("$$authorId").convertToObjectId())));
+               }
+ 
+               // Lookup to join author
+               stages.add(ExtendedAggregation.lookup("authors", Map.of("authorId", "$authorId"), "author", authorPipeline));
+ 
+               // Unwind author
+               stages.add(Aggregation.unwind("$author", false));
+ 
+               return Mono.just(stages);
+           })
+           .flatMap(stages -> this.mongoTemplate.aggregate(Aggregation.newAggregation(stages), "books", BookData.class));
+   }
+  
+}
+```
+
+## 3. The Solution
+Aggregation in MongoDB was built to process data and return computed results. Data is processed in stages and the output of one stage is provided as input to the next stage. This ability to apply transformations and do computations on data in stages makes aggregation a very powerful tool for analytics.
+
+Spring Data MongoDB provides an abstraction for native aggregation queries using the three classes `Aggregation` which wraps an aggregation query, `AggregationOperation` which wraps individual pipeline stages and `AggregationResults` which is the container of the result produced by aggregation.<sup>[5]</sup>
+
+Spring Data MongoDB offers a comprehensive solution for MongoDB access and particularly, aggregations, but not all the features are available. Trying to build a very complex search using the included aggregation features, we realize that some things are missing. In this example we're trying to use some aggregation advanced features, like the use of `pipeline` in a `$lookup` operation, or the ability to use a `$expr` inside a `$match`.
+
+Target MongoDB Aggregation
+```javascript
+db.books.aggregate([
+   {
+       $match: {
+           name: { $regex: ".*the.*", $options: "i" }
+       }
+   },
+   {
+       $lookup: {
+           from: "authors",
+           let: { authorId: "$authorId" },
+           pipeline: [
+               {
+                   $match: {
+                       $expr: {
+                           $and: [
+                               { $eq: ["$_id", { $toObjectId: "$$authorId" }] },
+                               { $regexMatch: { input: "$firstName", regex: ".*John.*", options: "i" }}
+                           ]
+                       }
+                   }
+               }
+           ],
+           as: "author"
+       }
+   },
+   {
+       $unwind: {
+           path: "$author",
+           preserveNullAndEmptyArrays: false
+       }
+   }
+])
+```
+
+There are a couple of ways to build the previous aggregation, including building a JSON representing the query. Here, we're focusing on building a solution that integrates with the aggregation features provided by Spring Data MongoDB.
+
+To support `$match: { $expr: { … }}`, `MatchExprOperation` was created. It implements `AggregationOperation` like all of the provided operations, the implementation is just as simple as building a `Document` that represents the wanted JSON output.
+
+`MatchExprOperation.java`
+```java
+package com.everymundo.demo.mongodb.aggregation;
+
+import org.bson.Document;
+import org.springframework.data.mongodb.core.aggregation.AggregationExpression;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperationContext;
+import org.springframework.util.Assert;
+
+public class MatchExprOperation implements AggregationOperation {
+	
+	private final AggregationExpression expr;
+	
+
+	public MatchExprOperation(AggregationExpression expr) {
+		Assert.notNull(expr, "Expr must not be null!");
+		
+		this.expr = expr;
+	}
+	
+	@Override
+	public Document toDocument(AggregationOperationContext context) {
+		Document exprObject = new Document();
+		exprObject.append("$expr", expr.toDocument(context));
+
+		return new Document(getOperator(), exprObject);
+	}
+
+	@Override
+	public String getOperator() {
+		return "$match";
+	}
+	
+}
+```
+
+You can see it in action here:
+```java
+// Match to join and filter author
+authorPipeline.add(ExtendedAggregation.matchExpr(BooleanOperators.And.and(authorMatches.toArray())));
+```
+
+Getting the `$regexMatch` operators to work was a little more tricky and we followed Spring's approach, similar to `BooleanOperators`, `ComparisonOperators` and `ConvertOperators` found in `org.springframework.data.mongodb.core.aggregation` package.
+
+`RegexOperators.java`
+```java
+package com.everymundo.demo.mongodb.aggregation;
+ 
+import org.apache.commons.lang3.StringUtils;
+import org.bson.Document;
+import org.springframework.data.mongodb.core.aggregation.AggregationExpression;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperationContext;
+import org.springframework.util.Assert;
+ 
+public class RegexOperators {
+ 
+   public static RegexOperatorFactory valueOf(String fieldReference) {
+       return new RegexOperatorFactory(fieldReference);
+   }
+ 
+   public static class RegexOperatorFactory {
+ 
+       private final String fieldReference;
+ 
+       
+       public RegexOperatorFactory(String fieldReference) {
+           Assert.notNull(fieldReference, "FieldReference must not be null!");
+           this.fieldReference = fieldReference;
+       }
+       
+       public Match match(String regex) {
+           return match(regex, null);
+       }
+        
+       public Match match(String regex, String options) {
+           Assert.notNull(regex, "Regex must not be null!");
+           return Match.valueOf(fieldReference).match(regex, options);
+       }
+ 
+   }
+ 
+   public static class Match implements AggregationExpression {
+ 
+       private String input;
+       private String regex;
+       private String options;
+ 
+ 
+       private Match(String input) {
+           this(input, null);
+       }
+ 
+       private Match(String input, String options) {
+           this.input = input;
+           this.options = options;
+       }
+ 
+       public Match match(String regex) {
+           return match(regex, null);
+       }
+ 
+       public Match match(String regex, String options) {
+           this.regex = regex;
+           this.options = options;
+ 
+           return this;
+       }
+ 
+       @Override
+       public Document toDocument(AggregationOperationContext context) {
+           Document matchObject = new Document();
+      
+           matchObject.append("input", input);
+           matchObject.append("regex", regex);
+           if (StringUtils.isNotBlank(options)) {
+               matchObject.append("options", options);
+           }
+          
+           return new Document(getMongoMethod(), matchObject);
+       }
+ 
+       private String getMongoMethod() {
+           return "$regexMatch";
+       }
+ 
+       public static Match valueOf(String fieldReference) {
+           Assert.notNull(fieldReference, "FieldReference must not be null!");
+           return new Match(fieldReference);
+       }
+      
+   }
+  
+}
+```
+
+Here's an example:
+```java
+// Author First Name
+if (StringUtils.isNotBlank(filter.getAuthor().getFirstName())) {
+    authorMatches.add(RegexOperators.valueOf("$firstName").match(".*" + filter.getAuthor().getFirstName() + ".*", "i"));
+}
+```
+
+`LookupPipelineOperation` represents a `$lookup` operation with support for `pipeline` attribute, where you can add stages to filter, process or project specific fields in the output.
+
+`LookupPipelineOperation.java`
+```java
+package com.everymundo.demo.mongodb.aggregation;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.bson.Document;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperationContext;
+import org.springframework.data.mongodb.core.aggregation.ExposedFields;
+import org.springframework.data.mongodb.core.aggregation.Field;
+import org.springframework.data.mongodb.core.aggregation.Fields;
+import org.springframework.data.mongodb.core.aggregation.FieldsExposingAggregationOperation.InheritsFieldsAggregationOperation;
+import org.springframework.util.Assert;
+
+public class LookupPipelineOperation implements InheritsFieldsAggregationOperation {
+	
+	private final Field from;
+	private final Map<String, String> let;
+	private final List<AggregationOperation> pipeline;
+	private final Field as;
+
+
+	public LookupPipelineOperation(String from, Map<String, String> let, List<AggregationOperation> pipeline, String as) {
+		Assert.notNull(from, "Field must not be null!");
+		Assert.notEmpty(let, "Let must not be empty!");
+		Assert.notEmpty(pipeline, "Pipeline must not be empty!");
+		Assert.notNull(as, "As must not be null!");
+		
+		this.from = Fields.field(from);
+		this.let = let;
+		this.pipeline = pipeline;
+		this.as = Fields.field(as);
+	}
+	
+	@Override
+	public ExposedFields getFields() {
+		return ExposedFields.synthetic(Fields.from(as));
+	}
+	
+	@Override
+	public Document toDocument(AggregationOperationContext context) {
+		Document lookupObject = new Document();
+		
+		Document letObject = new Document();
+		let.entrySet().stream().forEach(entry -> letObject.append(entry.getKey(), entry.getValue()));
+
+		lookupObject.append("from", from.getTarget());
+		lookupObject.append("let", letObject);
+		lookupObject.append("pipeline", pipeline.stream().map(stage -> stage.toPipelineStages(context).get(0)).collect(Collectors.toList()));
+		lookupObject.append("as", as.getTarget());
+		
+		return new Document(getOperator(), lookupObject);
+	}
+	
+	@Override
+	public String getOperator() {
+		return "$lookup";
+	}
+
+}
+```
+
+How to use `LookupPipelineOperation`:
+```java
+// Lookup to join author
+stages.add(ExtendedAggregation.lookup("authors", Map.of("authorId", "$authorId"), "author", authorPipeline));
+```
+
+Finally, we created `ExtendedAggregation` class, following the `Aggregation` class approach, to expose builder methods for both `MatchExprOperation` and `LookupPipelineOperation`
+
+`ExtendedAggregation`
+```java
+package com.everymundo.demo.mongodb.aggregation;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.data.mongodb.core.aggregation.AggregationExpression;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+
+public class ExtendedAggregation {
+	
+	private ExtendedAggregation() {
+	}
+	
+	public static LookupPipelineOperation lookup(String from, Map<String, String> let, String as, AggregationOperation...pipeline) {
+		return lookup(from, let, as, Arrays.asList(pipeline));
+	}
+	
+	public static LookupPipelineOperation lookup(String from, Map<String, String> let, String as, List<AggregationOperation> pipeline) {
+		return new LookupPipelineOperation(from, let, pipeline, as);
+	}
+	
+	public static MatchExprOperation matchExpr(AggregationExpression expr) {
+		return new MatchExprOperation(expr);
+	}
+
+}
+```
+
+**Note:**<br/>
+We kept the aggregation extension classes clean from any Lombok annotation in case anyone wanted to copy them as is to use them.
+<br/>
+<br/>
+
+## 4. Running the Application
+To fully test the solution we recommend downloading the latest code from the Github repo. If you don't have MongoDB already installed, do so or skip the following if you already have MongoDB available. 
+
+We strongly encourage the use of [Docker Desktop](https://www.docker.com/products/docker-desktop). After installing and starting it, go to the terminal and run the following command:
+```
+docker run --name=mongodb -p 27017:27017 -d mongo
+```
+
+After a couple of minutes you should have a running instance of MongoDB in port 27017.
+
+Once everything is in place, go to the terminal and navigate to where the folder of the application is and execute the following:
+```
+mvn install && mvn spring-boot:run
+```
+
+Now the application is ready to receive traffic. Open another terminal (or REST client like Postman) and execute the following:
+```
+curl --location --request POST 'localhost:8080/books' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "book": {
+        "name": "the"
+    },
+    "author": {
+        "firstName": "john",
+        "lastName": "kien"
+    }
+}'
+```
+
+Expect this response:
+```json
+[
+    {
+        "name": "The Hobbit",
+        "year": 1937,
+        "author": {
+            "firstName": "John",
+            "middleName": "Ronald Reuel",
+            "lastName": "Tolkien",
+            "birthDate": "1892-01-03"
+        }
+    },
+    {
+        "name": "The Lord of the Rings: The Two Towers",
+        "year": 1954,
+        "author": {
+            "firstName": "John",
+            "middleName": "Ronald Reuel",
+            "lastName": "Tolkien",
+            "birthDate": "1892-01-03"
+        }
+    },
+    {
+        "name": "The Lord of the Rings: The Fellowship of the Ring",
+        "year": 1954,
+        "author": {
+            "firstName": "John",
+            "middleName": "Ronald Reuel",
+            "lastName": "Tolkien",
+            "birthDate": "1892-01-03"
+        }
+    },
+    {
+        "name": "The Lord of the Rings: The Return of the King",
+        "year": 1955,
+        "author": {
+            "firstName": "John",
+            "middleName": "Ronald Reuel",
+            "lastName": "Tolkien",
+            "birthDate": "1892-01-03"
+        }
+    }
+]
+```
+
+## Conclusion
+
+TODO
+<br/>
+<br/>
+
 ## References
 1. Spring Data (https://spring.io/projects/spring-data)
 2. Spring Data MongoDB (https://spring.io/projects/spring-data-mongodb)
 3. Spring Data MongoDB - Mapping (https://docs.spring.io/spring-data/mongodb/docs/current/reference/html/#mapping-chapter)
 4. Spring WebFlux - Functional Endpoints (https://docs.spring.io/spring-framework/docs/current/reference/html/web-reactive.html#webflux-fn)
+5. Spring Data MongoDB: Projections and Aggregations (https://www.baeldung.com/spring-data-mongodb-projections-aggregations)
