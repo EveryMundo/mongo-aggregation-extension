@@ -10,7 +10,7 @@ Spring Data MongoDB offers a bunch of nice features, however, it does not suppor
 <br/>
 
 ## 2. Getting Started
-In this tutorial we're going to show you how easily extend Spring Data Reactive MongoDB aggregation features. You can start from scratch and complete each step or you can skip the steps that are already familiar to you and download the complete code here (**TODO:** Link to the repo).
+In this tutorial we're going to show you how easily extend Spring Data Reactive MongoDB aggregation features. You can start from scratch and complete each step or you can skip the steps that are already familiar to you and download the complete code [here](https://github.com/EveryMundo/mongo-aggregation-extension).
 
 We'll be using Spring Boot 2.4.6, Spring Data Reactive MongoDB, Java 11, Apache Maven, MongoDB 4.4 and Docker. You can use slightly different versions for this tutorial but at least Java 8 and MongoDB 4.x are recommended. If you don't know all the technologies or if you're interested to take a deep dive any of them, you can check the following links:
 
@@ -277,7 +277,77 @@ public class BookData {
 ```
 <br/>
 
+### 2.4. Create Functional Endpoint
+Spring WebFlux includes WebFlux.fn, a lightweight functional programming model in which functions are used to route and handle requests and contracts are designed for immutability. It is an alternative to the annotation-based programming model but otherwise runs on the same Reactive Core foundation.
+
+In WebFlux.fn, an HTTP request is handled with a `HandlerFunction`: a function that takes `ServerRequest` and returns a delayed `ServerResponse` (i.e. `Mono<ServerResponse>`). Both the request and the response object have immutable contracts that offer JDK 8-friendly access to the HTTP request and response. `HandlerFunction` is the equivalent of the body of a `@RequestMapping` method in the annotation-based programming model.
+
+Incoming requests are routed to a handler function with a `RouterFunction`: a function that takes `ServerRequest` and returns a delayed `HandlerFunction` (i.e. `Mono<HandlerFunction>`). When the router function matches, a handler function is returned; otherwise an empty `Mono`. `RouterFunction` is the equivalent of a `@RequestMapping` annotation, but with the major difference that router functions provide not just data, but also behavior.<sup>[4]</sup>
+
+The application exposes a single POST Book Search endpoint.
+
+`RouteConfiguration.java`
+```java
+package com.everymundo.demo.config;
+ 
+import static org.springframework.web.reactive.function.server.RequestPredicates.POST;
+import static org.springframework.web.reactive.function.server.RequestPredicates.accept;
+import static org.springframework.web.reactive.function.server.RouterFunctions.route;
+ 
+import com.everymundo.demo.handler.LibraryHandler;
+ 
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
+import org.springframework.web.reactive.function.server.RouterFunction;
+import org.springframework.web.reactive.function.server.ServerResponse;
+ 
+@Configuration
+public class RouteConfiguration {
+  
+   @Bean
+   public RouterFunction<ServerResponse> libraryRoutes(LibraryHandler handler) {
+       return route(POST("/books").and(accept(MediaType.APPLICATION_JSON)), handler::searchBooks);
+   }
+ 
+}
+```
+
+`LibraryHandler.java`
+```java
+package com.everymundo.demo.handler;
+ 
+import static org.springframework.web.reactive.function.server.ServerResponse.ok;
+ 
+import com.everymundo.demo.model.BookData;
+import com.everymundo.demo.model.filter.LibraryFilter;
+import com.everymundo.demo.service.LibraryService;
+ 
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.server.ServerRequest;
+import org.springframework.web.reactive.function.server.ServerResponse;
+ 
+import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Mono;
+ 
+@Component
+@RequiredArgsConstructor
+public class LibraryHandler {
+ 
+   private final LibraryService libraryService;
+ 
+ 
+   public Mono<ServerResponse> searchBooks(ServerRequest request) {
+       return request.bodyToMono(LibraryFilter.class)
+               .flatMap(filter -> ok().body(this.libraryService.searchBooks(filter), BookData.class));
+   }
+ 
+}
+```
+<br/>
+
 ## References
 1. Spring Data (https://spring.io/projects/spring-data)
 2. Spring Data MongoDB (https://spring.io/projects/spring-data-mongodb)
 3. Spring Data MongoDB - Mapping (https://docs.spring.io/spring-data/mongodb/docs/current/reference/html/#mapping-chapter)
+4. Spring WebFlux - Functional Endpoints (https://docs.spring.io/spring-framework/docs/current/reference/html/web-reactive.html#webflux-fn)
