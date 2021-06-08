@@ -1,0 +1,61 @@
+{
+    "authors": [
+        {
+            "id": "60be77e5d5cc1b3400c0a928",
+            "firstName": "John",
+            "middleName": "Ronald Reuel",
+            "lastName": "Tolkien",
+            "birthDate": "1892-01-03"
+        },
+        {
+            "id": "60bef5d7d5cc1b3400c0a982",
+            "firstName": "Isaac",
+            "lastName": "Asimov",
+            "birthDate": "1920-01-02"
+        }
+    ],
+    "books": [
+        {
+            "id": "60be781bd5cc1b3400c0a929",
+            "name": "The Hobbit",
+            "year": 1937,
+            "authorId": "60be77e5d5cc1b3400c0a928"
+        },
+        {
+            "id": "60be8755d5cc1b3400c0a935",
+            "name": "The Lord of the Rings: The Fellowship of the Ring",
+            "year": 1954,
+            "authorId": "60be77e5d5cc1b3400c0a928"
+        },
+        {
+            "id": "60bef5bcd5cc1b3400c0a980",
+            "name": "The Lord of the Rings: The Two Towers",
+            "year": 1954,
+            "authorId": "60be77e5d5cc1b3400c0a928"
+        },
+        {
+            "id": "60bef5c0d5cc1b3400c0a981",
+            "name": "The Lord of the Rings: The Return of the King",
+            "year": 1955,
+            "authorId": "60be77e5d5cc1b3400c0a928"
+        },
+        {
+            "id": "60bef646d5cc1b3400c0a983",
+            "name": "Foundation",
+            "year": 1951,
+            "authorId": "60bef5d7d5cc1b3400c0a982"
+        },
+        {
+            "id": "60befc93d5cc1b3400c0a999",
+            "name": "Foundation and Empire",
+            "year": 1952,
+            "authorId": "60bef5d7d5cc1b3400c0a982"
+        },
+        {
+            "id": "60befc97d5cc1b3400c0a99a",
+            "name": "Second Foundation",
+            "year": 1953,
+            "authorId": "60bef5d7d5cc1b3400c0a982"
+        }
+    ]
+}
