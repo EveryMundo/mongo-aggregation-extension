@@ -1,4 +1,5 @@
 # How to Extend Spring Data Reactive MongoDB Aggregation Features
+<br/>
 
 ## 1. Overview
 Spring Data’s mission is to provide a familiar and consistent, Spring-based programming model for data access while still retaining the special traits of the underlying data store. It makes it easy to use data access technologies, relational and non-relational databases, map-reduce frameworks, and cloud-based data services.<sup>[1]</sup>
@@ -6,8 +7,9 @@ Spring Data’s mission is to provide a familiar and consistent, Spring-based pr
 The Spring Data MongoDB project provides integration with the MongoDB document database. Key functional areas of Spring Data MongoDB are a POJO centric model for interacting with a MongoDB DBCollection and easily writing a Repository style data access layer.<sup>[2]</sup>
 
 Spring Data MongoDB offers a bunch of nice features, however, it does not support all the operations available in MongoDB. This tutorial will provide a clean way to extend Spring Data MongoDB aggregation features. We're not including all the supported operations. In case you need more or different ones that are not part of the tutorial, you can always follow the same approach.
+<br/>
 
-# 2. Getting Started
+## 2. Getting Started
 In this tutorial we're going to show you how easily extend Spring Data Reactive MongoDB aggregation features. You can start from scratch and complete each step or you can skip the steps that are already familiar to you and download the complete code here (**TODO:** Link to the repo).
 
 We'll be using Spring Boot 2.4.6, Spring Data Reactive MongoDB, Java 11, Apache Maven, MongoDB 4.4 and Docker. You can use slightly different versions for this tutorial but at least Java 8 and MongoDB 4.x are recommended. If you don't know all the technologies or if you're interested to take a deep dive any of them, you can check the following links:
@@ -24,8 +26,9 @@ We'll be using Spring Boot 2.4.6, Spring Data Reactive MongoDB, Java 11, Apache 
 We recommend an OpenJDK distribution of Java for development as well as production environments since Oracle has changed the Licence Agreement (see here) starting April 16, 2019. AdoptOpenJDK (https://adoptopenjdk.net) offers free prebuilt OpenJDK binaries for Windows, Linux and MacOS.
 
 This tutorial will implement an HTTP POST Book Search endpoint for a Library Service.
+<br/>
 
-## 2.1. Starting with Spring Initializr
+### 2.1. Starting with Spring Initializr
 Go to Spring Initializr (https://start.spring.io) to generate a new project with the required dependencies. Use the following configurations:
 
 Alternatively you can use the following link:<br/>
@@ -128,8 +131,9 @@ Manually add `<skipTests>true</skipTests>` property, since we're not going to be
     ...
 </dependencies>
 ```
+<br/>
 
-## 2.2. Create Domain Classes
+### 2.2. Create Domain Classes
 Domain classes represent MongoDB documents that will be stored in different MongoDB collections. Rich mapping support is provided by the `MappingMongoConverter`. It has a rich metadata model that provides a full feature set to map domain objects to MongoDB documents. The mapping metadata model is populated by using annotations on your domain objects. However, the infrastructure is not limited to using annotations as the only source of metadata information.<sup>[3]</sup>
 
 `Author.java`
@@ -184,7 +188,7 @@ public class Book {
 
 We're not going to be using the domain classes directly in the Aggregation example but the service that populates the DB needs them and they will give you a good idea of the information we'll be querying.
 
-## 2.3. Create Data Transfer Classes
+### 2.3. Create Data Transfer Classes
 The Book Search feature will need several data transfer classes to receive the filters in the request and return the results in the response.
 
 `LibraryFilter.java`
@@ -271,8 +275,9 @@ public class BookData {
   
 }
 ```
+<br/>
 
-# References
+## References
 1. Spring Data (https://spring.io/projects/spring-data)
 2. Spring Data MongoDB (https://spring.io/projects/spring-data-mongodb)
 3. Spring Data MongoDB - Mapping (https://docs.spring.io/spring-data/mongodb/docs/current/reference/html/#mapping-chapter)
