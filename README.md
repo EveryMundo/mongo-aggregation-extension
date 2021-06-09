@@ -743,8 +743,9 @@ Expect this response:
 ```
 
 ## Conclusion
+Spring Data MongoDB is an awesome project that makes the life of the developers working with MongoDB very easy. It's very extensible and you can expand its own capabilities. However, not everything is full of happiness. We encounter some setbacks during the process of building the solution, mostly related to classes inside `org.springframework.data.mongodb.core.aggregation` package that are not accessible from outside, like `AbstractAggregationExpression`, a support class that implements several methods to manipulate the contents of an expression, or the class `ExposedField` which represents an exposed field, needed to mark a field available to be used in the next stage of the aggregation pipeline.
 
-TODO
+We still think Spring Data MongoDB is the best way to go if you're using Java and MongoDB. No matter the problems we found, Spring provides solid and easy to use ways to access and manipulate data in MongoDB.
 <br/>
 <br/>
 
