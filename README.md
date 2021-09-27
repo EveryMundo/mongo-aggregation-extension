@@ -2,18 +2,18 @@
 <br/>
 
 ## 1. Overview
-Spring Data’s mission is to provide a familiar and consistent, Spring-based programming model for data access while still retaining the special traits of the underlying data store. It makes it easy to use data access technologies, relational and non-relational databases, map-reduce frameworks, and cloud-based data services.<sup>[1]</sup>
+Spring Data’s mission is to provide a familiar and consistent Spring-based programming model for data access, while still retaining the special traits of the underlying data store. It makes it easy to use data access technologies, relational and non-relational databases, map-reduce frameworks, and cloud-based data services.<sup>[1]</sup>
 
 The Spring Data MongoDB project provides integration with the MongoDB document database. Key functional areas of Spring Data MongoDB are a POJO centric model for interacting with a MongoDB DBCollection and easily writing a Repository style data access layer.<sup>[2]</sup>
 
-Spring Data MongoDB offers a bunch of nice features, however, it does not support all the operations available in MongoDB. This tutorial will provide a clean way to extend Spring Data MongoDB aggregation features. We're not including all the supported operations. In case you need more or different ones that are not part of the tutorial, you can always follow the same approach.
+Spring Data MongoDB offers a bunch of nice features, however it does not support all the operations available in MongoDB. This tutorial will provide a clean way to extend Spring Data MongoDB aggregation features. We're not including all the supported operations. In case you need others that are not part of the tutorial, you can always apply the same approach.
 <br/>
 <br/>
 
 ## 2. Getting Started
-In this tutorial we're going to show you how easily extend Spring Data Reactive MongoDB aggregation features. You can start from scratch and complete each step or you can skip the steps that are already familiar to you and download the complete code [here](https://github.com/EveryMundo/mongo-aggregation-extension).
+In this tutorial we're going to show you how to easily extend Spring Data Reactive MongoDB aggregation features. You can start from scratch and complete each step or you can skip the steps that are already familiar to you and download the complete code [here](https://github.com/EveryMundo/mongo-aggregation-extension).
 
-We'll be using Spring Boot 2.4.6, Spring Data Reactive MongoDB, Java 11, Apache Maven, MongoDB 4.4 and Docker. You can use slightly different versions for this tutorial but at least Java 8 and MongoDB 4.x are recommended. If you don't know all the technologies or if you're interested to take a deep dive any of them, you can check the following links:
+We'll be using Spring Boot 2.4.6, Spring Data Reactive MongoDB, Java 11, Apache Maven, MongoDB 4.4 and Docker. You can use slightly different versions for this tutorial, but at least Java 8 and MongoDB 4.x are recommended. If you don't know all the technologies, or if you're interested in taking a deep dive into any of them, you can check out the following links:
 
 * Java (https://docs.oracle.com/en/java/index.html)
 * Spring Framework (https://spring.io/projects/spring-framework)
@@ -24,7 +24,7 @@ We'll be using Spring Boot 2.4.6, Spring Data Reactive MongoDB, Java 11, Apache 
 * Docker (https://docs.docker.com)
 
 **Note:**<br/>
-We recommend an OpenJDK distribution of Java for development as well as production environments since Oracle has changed the Licence Agreement (see here) starting April 16, 2019. AdoptOpenJDK (https://adoptopenjdk.net) offers free prebuilt OpenJDK binaries for Windows, Linux and MacOS.
+We recommend an OpenJDK distribution of Java for development as well as production environments since Oracle has changed the Licence Agreement (see here) starting April 16, 2019. AdoptOpenJDK (https://adoptopenjdk.net) offers free pre-built OpenJDK binaries for Windows, Linux and MacOS.
 
 This tutorial will implement an HTTP POST Book Search endpoint for a Library Service.
 <br/>
@@ -188,15 +188,15 @@ public class Book {
 }
 ```
 
-We're not going to be using the domain classes directly in the Aggregation example but the service that populates the DB needs them and they will give you a good idea of the information we'll be querying.
+We're not going to be using the domain classes directly in the Aggregation example, but the service that populates the DB needs them and they will give you a good idea of the information we'll be querying.
 
 ### 2.3. Create Data Transfer Classes
-The Book Search feature will need several data transfer classes to receive the filters in the request and return the results in the response. To avoid making this tutorial too boring we're not going to put the code of those clases here. You can check `LibraryFilter`, `BookFilter`, `AuthorFilter`, `BookData` and `AuthorData` [here](https://github.com/EveryMundo/mongo-aggregation-extension/tree/master/src/main/java/com/everymundo/demo/model)
+The Book Search feature will need several data transfer classes to receive the filters in the request and return the results in the response. To avoid making this tutorial too boring we're not going to add the code for those classes here. You can check `LibraryFilter`, `BookFilter`, `AuthorFilter`, `BookData` and `AuthorData` [here](https://github.com/EveryMundo/mongo-aggregation-extension/tree/master/src/main/java/com/everymundo/demo/model).
 <br/>
 <br/>
 
 ### 2.4. Create Functional Endpoint
-Spring WebFlux includes WebFlux.fn, a lightweight functional programming model in which functions are used to route and handle requests and contracts are designed for immutability. It is an alternative to the annotation-based programming model but otherwise runs on the same Reactive Core foundation.
+Spring WebFlux includes WebFlux.fn, a lightweight functional programming model in which functions are used to route and handle requests, and contracts are designed for immutability. It is an alternative to the annotation-based programming model, but otherwise runs on the same Reactive Core foundation.
 
 In WebFlux.fn, an HTTP request is handled with a `HandlerFunction`: a function that takes `ServerRequest` and returns a delayed `ServerResponse` (i.e. `Mono<ServerResponse>`). Both the request and the response object have immutable contracts that offer JDK 8-friendly access to the HTTP request and response. `HandlerFunction` is the equivalent of the body of a `@RequestMapping` method in the annotation-based programming model.
 
@@ -367,9 +367,9 @@ public class LibraryService {
 ## 3. The Solution
 Aggregation in MongoDB was built to process data and return computed results. Data is processed in stages and the output of one stage is provided as input to the next stage. This ability to apply transformations and do computations on data in stages makes aggregation a very powerful tool for analytics.
 
-Spring Data MongoDB provides an abstraction for native aggregation queries using the three classes `Aggregation` which wraps an aggregation query, `AggregationOperation` which wraps individual pipeline stages and `AggregationResults` which is the container of the result produced by aggregation.<sup>[5]</sup>
+Spring Data MongoDB provides an abstraction for native aggregation queries using the three classes: `Aggregation`, which wraps an aggregation query; `AggregationOperation`, which wraps individual pipeline stages; and `AggregationResults`, which is the container of the result produced by aggregation.<sup>[5]</sup>
 
-Spring Data MongoDB offers a comprehensive solution for MongoDB access and particularly, aggregations, but not all the features are available. Trying to build a very complex search using the included aggregation features, we realize that some things are missing. In this example we're trying to use some aggregation advanced features, like the use of `pipeline` in a `$lookup` operation, or the ability to use a `$expr` inside a `$match`.
+Spring Data MongoDB offers a comprehensive solution for MongoDB access and particularly, aggregations, but not all of the features are available. Trying to build a very complex search using the included aggregation features, we realized that some things were missing. In this example we're trying to use some aggregation advanced features, like the use of `pipeline` in a `$lookup` operation, or the ability to use a `$expr` inside a `$match`.
 
 Target MongoDB Aggregation
 ```javascript
@@ -409,7 +409,7 @@ db.books.aggregate([
 
 There are a couple of ways to build the previous aggregation, including building a JSON representing the query. Here, we're focusing on building a solution that integrates with the aggregation features provided by Spring Data MongoDB.
 
-To support `$match: { $expr: { … }}`, `MatchExprOperation` was created. It implements `AggregationOperation` like all of the provided operations, the implementation is just as simple as building a `Document` that represents the wanted JSON output.
+To support `$match: { $expr: { … }}`, `MatchExprOperation` was created. It implements `AggregationOperation` like all of the provided operations, the implementation is just as simple as building a `Document` that represents the expected JSON output.
 
 `MatchExprOperation.java`
 ```java
@@ -454,7 +454,7 @@ You can see it in action here:
 authorPipeline.add(ExtendedAggregation.matchExpr(BooleanOperators.And.and(authorMatches.toArray())));
 ```
 
-Getting the `$regexMatch` operators to work was a little more tricky and we followed Spring's approach, similar to `BooleanOperators`, `ComparisonOperators` and `ConvertOperators` found in `org.springframework.data.mongodb.core.aggregation` package.
+Getting the `$regexMatch` operators to work was a little trickier and we followed Spring's approach, similar to `BooleanOperators`, `ComparisonOperators` and `ConvertOperators` found in `org.springframework.data.mongodb.core.aggregation` package.
 
 `RegexOperators.java`
 ```java
@@ -555,7 +555,7 @@ if (StringUtils.isNotBlank(filter.getAuthor().getFirstName())) {
 }
 ```
 
-`LookupPipelineOperation` represents a `$lookup` operation with support for `pipeline` attribute, where you can add stages to filter, process or project specific fields in the output.
+`LookupPipelineOperation` represents a `$lookup` operation with support for the `pipeline` attribute, where you can add stages to filter, process or project-specific fields in the output.
 
 `LookupPipelineOperation.java`
 ```java
@@ -628,7 +628,7 @@ How to use `LookupPipelineOperation`:
 stages.add(ExtendedAggregation.lookup("authors", Map.of("authorId", "$authorId"), "author", authorPipeline));
 ```
 
-Finally, we created `ExtendedAggregation` class, following the `Aggregation` class approach, to expose builder methods for both `MatchExprOperation` and `LookupPipelineOperation`
+Finally, we created the `ExtendedAggregation` class, following the `Aggregation` class approach, to expose builder methods for both `MatchExprOperation` and `LookupPipelineOperation`.
 
 `ExtendedAggregation`
 ```java
@@ -662,7 +662,7 @@ public class ExtendedAggregation {
 ```
 
 **Note:**<br/>
-We kept the aggregation extension classes clean from any Lombok annotation in case anyone wanted to copy them as is to use them.
+We kept the aggregation extension classes clean from any Lombok annotation in case anyone wanted to copy them as is, and use them.
 <br/>
 <br/>
 
@@ -743,9 +743,9 @@ Expect this response:
 ```
 
 ## Conclusion
-Spring Data MongoDB is an awesome project that makes the life of the developers working with MongoDB very easy. It's very extensible and you can expand its own capabilities. However, not everything is full of happiness. We encounter some setbacks during the process of building the solution, mostly related to classes inside `org.springframework.data.mongodb.core.aggregation` package that are not accessible from outside, like `AbstractAggregationExpression`, a support class that implements several methods to manipulate the contents of an expression, or the class `ExposedField` which represents an exposed field, needed to mark a field available to be used in the next stage of the aggregation pipeline.
+Spring Data MongoDB is an awesome project that makes the life of the developers working with MongoDB much easier. It's very extensible and you can continue to expand its capabilities. However, not everything is full of happiness. We encountered some setbacks during the process of building the solution, mostly related to classes inside `org.springframework.data.mongodb.core.aggregation` package that are not accessible from outside. These include: `AbstractAggregationExpression`, a support class that implements several methods to manipulate the contents of an expression; or the class `ExposedField`, which represents an exposed field needed to mark a field available to be used in the next stage of the aggregation pipeline.
 
-We still think Spring Data MongoDB is the best way to go if you're using Java and MongoDB. No matter the problems we found, Spring provides solid and easy to use ways to access and manipulate data in MongoDB.
+We still think Spring Data MongoDB is the best way to go if you're using Java and MongoDB. No matter the problems we found, Spring provides solid and easy-to-use ways to access and manipulate data in MongoDB.
 <br/>
 <br/>
 
